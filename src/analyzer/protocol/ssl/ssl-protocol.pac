@@ -8,7 +8,7 @@ type SSLRecord(is_orig: bool) = record {
 	head2 : uint8;
 	head3 : uint8;
 	head4 : uint8;
-	rec : RecordText(this)[] &length=length, &requires(version,content_type,raw_tls_version);
+	rec : PlaintextRecord(this)[] &length=length, &requires(version,content_type,raw_tls_version);
 } &length = length+5, &byteorder=bigendian,
 	&let {
 	version : int =

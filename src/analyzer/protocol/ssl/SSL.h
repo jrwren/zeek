@@ -5,11 +5,31 @@
 
 #include "analyzer/protocol/tcp/TCP.h"
 
+#include "binpac.h"
+#include <memory>
+#include <iomanip>
+#include <sstream>
+
+
 namespace binpac { namespace SSL { class SSL_Conn; } }
 
 namespace binpac { namespace TLSHandshake { class Handshake_Conn; } }
 
 namespace analyzer { namespace ssl {
+
+class DecryptProcess {
+public:
+	DecryptProcess(int tlsver, int cs, binpac::bytestring cr, binpac::bytestring sr, bool is_orig);
+	~DecryptProcess();
+	int Write(std::string cont);
+	unique_ptr<std::string> Read();
+	int Close();
+protected:
+	bool inclosed;
+	int in_fd;
+	int out_fd;
+	int err_fd;
+};
 
 class SSL_Analyzer : public tcp::TCP_ApplicationAnalyzer {
 public:
@@ -32,11 +52,20 @@ public:
 	static analyzer::Analyzer* Instantiate(Connection* conn)
 		{ return new SSL_Analyzer(conn); }
 
+	void DoHTTP(std::string data, bool is_orig);
+	unique_ptr<std::string> DecryptString(int tlsver, int cs, binpac::bytestring cr, binpac::bytestring sr, bool is_orig, std::string cont);
+
 protected:
 	binpac::SSL::SSL_Conn* interp;
 	binpac::TLSHandshake::Handshake_Conn* handshake_interp;
 	bool had_gap;
+	bool http_active;
+	std::unique_ptr<DecryptProcess> decrypt_orig;
+	std::unique_ptr<DecryptProcess> decrypt_not_orig;
+};
 
+struct PopenFailException : std::exception {
+  const char* what() const noexcept {return "popen failed";}
 };
 
 } } // namespace analyzer::* 

@@ -14,6 +14,9 @@ refine connection SSL_Conn += {
 
 	%member{
 		int established_;
+		bytestring clientrandom_;
+		bytestring serverrandom_;
+		uint32 chosen_cipher_;
 	%}
 
 	%init{
@@ -22,6 +25,21 @@ refine connection SSL_Conn += {
 
 	%cleanup{
 	%}
+
+	function set_clientrandom(cr : bytestring) : bool
+		%{
+			if (clientrandom_.data()) return false;
+			clientrandom_ = std::move(cr);
+			return true;
+		%}
+	function set_serverrandom(sr : bytestring) : bool
+		%{
+			if (serverrandom_.data()) return false;
+			serverrandom_ = std::move(sr);
+			return true;
+		%}
+	function set_chosen_cipher(cs : uint32) : bool
+		%{ chosen_cipher_ = cs; return true; %}
 
 	function setEstablished() : bool
 		%{
@@ -43,7 +61,7 @@ refine connection SSL_Conn += {
 		return true;
 		%}
 
-	function proc_ciphertext_record(rec : SSLRecord) : bool
+	function proc_ciphertext_record(rec : SSLRecord, ct : CiphertextRecord) : bool
 		%{
 		 if ( client_state_ == STATE_ENCRYPTED &&
 		      server_state_ == STATE_ENCRYPTED &&
@@ -54,11 +72,18 @@ refine connection SSL_Conn += {
 							bro_analyzer()->Conn());
 			}
 
-		if ( ssl_encrypted_data )
-			BifEvent::generate_ssl_encrypted_data(bro_analyzer(),
-				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length});
-
+		if ( ssl_ciphertext_data )
+			{
+			BifEvent::generate_ssl_ciphertext_data(bro_analyzer(),
+				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new StringVal(ct));
+			}
 		return true;
+		%}
+
+	function proc_applicationdata_record(rec : SSLRecord, ad : ApplicationData) : bool
+		%{
+		BifEvent::generate_ssl_application_data(bro_analyzer(),
+		bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new 	StringVal(ad->data()));
 		%}
 
 	function proc_plaintext_record(rec : SSLRecord) : bool
@@ -114,7 +139,11 @@ refine typeattr UnknownRecord += &let {
 };
 
 refine typeattr CiphertextRecord += &let {
-	proc : bool = $context.connection.proc_ciphertext_record(rec);
+	proc : bool = $context.connection.proc_ciphertext_record(rec, this);
+}
+
+refine typeattr ApplicationData += &let {
+	proc : bool = $context.connection.proc_applicationdata_record(rec, this);
 }
 
 refine typeattr PlaintextRecord += &let {

@@ -28,6 +28,9 @@ public:
 	static analyzer::Analyzer* Instantiate(Connection* conn)
 		{ return new DTLS_Analyzer(conn); }
 
+	void DoHTTP(std::string data, bool is_orig);
+	unique_ptr<std::string> DecryptString(int cs, std::string cr, std::string sr, bool is_orig, std::string cont);
+
 protected:
 	binpac::DTLS::SSL_Conn* interp;
 	binpac::TLSHandshake::Handshake_Conn* handshake_interp;
