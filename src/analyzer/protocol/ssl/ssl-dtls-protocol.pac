@@ -66,7 +66,7 @@ type Alert(rec: SSLRecord) = record {
 # Application data should always be encrypted, so we should not
 # reach this point, unless we are in TLS 1.3 ...
 type ApplicationData(rec: SSLRecord) = record {
-	data : bytestring &restofdata &transient;
+	data : bytestring &restofdata;
 };
 
 ######################################################################
@@ -89,7 +89,7 @@ type UnknownRecord(rec: SSLRecord) = record {
 };
 
 type CiphertextRecord(rec: SSLRecord) = record {
-	cont : bytestring &restofdata &transient;
+	cont : bytestring &restofdata;
 };
 
 ######################################################################

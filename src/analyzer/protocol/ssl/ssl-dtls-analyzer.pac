@@ -43,7 +43,7 @@ refine connection SSL_Conn += {
 		return true;
 		%}
 
-	function proc_ciphertext_record(rec : SSLRecord) : bool
+	function proc_ciphertext_record(rec : SSLRecord, ct : CiphertextRecord) : bool
 		%{
 		 if ( client_state_ == STATE_ENCRYPTED &&
 		      server_state_ == STATE_ENCRYPTED &&
@@ -55,14 +55,22 @@ refine connection SSL_Conn += {
 			}
 
 		if ( ssl_encrypted_data )
+			{
 			BifEvent::generate_ssl_encrypted_data(bro_analyzer(),
-				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length});
-
+				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new StringVal(ct));
+			}
 		return true;
+		%}
+
+	function proc_applicationdata_record(rec : SSLRecord, ad : ApplicationData) : bool
+		%{
+			BifEvent::generate_application_data(bro_analyzer(),
+			bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new StringVal(ad->data()));
 		%}
 
 	function proc_plaintext_record(rec : SSLRecord) : bool
 		%{
+		
 		if ( ssl_plaintext_data )
 			BifEvent::generate_ssl_plaintext_data(bro_analyzer(),
 				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length});
@@ -114,7 +122,11 @@ refine typeattr UnknownRecord += &let {
 };
 
 refine typeattr CiphertextRecord += &let {
-	proc : bool = $context.connection.proc_ciphertext_record(rec);
+	proc : bool = $context.connection.proc_ciphertext_record(rec, this);
+}
+
+refine typeattr ApplicationData += &let {
+	proc : bool = $context.connection.proc_applicationdata_record(rec, this);
 }
 
 refine typeattr PlaintextRecord += &let {
