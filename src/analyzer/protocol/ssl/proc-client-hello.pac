@@ -1,5 +1,5 @@
 	function proc_client_hello(
-					version : uint16, ts : double,
+					version : uint16,
 					client_random : bytestring,
 					session_id : uint8[],
 					cipher_suites16 : uint16[],
@@ -13,6 +13,11 @@
 			}
 		else
 			bro_analyzer()->ProtocolConfirmation();
+
+		// Copy it, becuase its about to be deleted, &transient or not.
+		// I do not know why, but I can't use std::move here.
+		//clientrandom_ = std::move(client_random);
+		clientrandom_.init(client_random.data(), client_random.length());
 
 		if ( ssl_client_hello )
 			{
@@ -40,7 +45,7 @@
 				}
 
 			BifEvent::generate_ssl_client_hello(bro_analyzer(), bro_analyzer()->Conn(),
-							version, record_version(), ts, new StringVal(client_random.length(),
+							version, record_version(), new StringVal(client_random.length(),
 							(const char*) client_random.data()),
 							to_string_val(session_id),
 							cipher_vec, comp_vec);

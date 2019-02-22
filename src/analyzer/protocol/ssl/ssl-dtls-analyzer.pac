@@ -14,6 +14,9 @@ refine connection SSL_Conn += {
 
 	%member{
 		int established_;
+		bytestring clientrandom_;
+		bytestring serverrandom_;
+		uint32 chosen_cipher_;
 	%}
 
 	%init{
@@ -22,6 +25,21 @@ refine connection SSL_Conn += {
 
 	%cleanup{
 	%}
+
+	function set_clientrandom(cr : bytestring) : bool
+		%{
+			if (clientrandom_.data()) return false;
+			clientrandom_ = std::move(cr);
+			return true;
+		%}
+	function set_serverrandom(sr : bytestring) : bool
+		%{
+			if (serverrandom_.data()) return false;
+			serverrandom_ = std::move(sr);
+			return true;
+		%}
+	function set_chosen_cipher(cs : uint32) : bool
+		%{ chosen_cipher_ = cs; return true; %}
 
 	function setEstablished() : bool
 		%{
@@ -55,9 +73,10 @@ refine connection SSL_Conn += {
 			}
 
 		if ( ssl_encrypted_data )
+			{
 			BifEvent::generate_ssl_encrypted_data(bro_analyzer(),
 				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length});
-
+			}
 		return true;
 		%}
 

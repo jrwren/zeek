@@ -200,7 +200,7 @@ function finish(c: connection, remove_analyzer: bool)
 		}
 	}
 
-event ssl_client_hello(c: connection, version: count, record_version: count, possible_ts: time, client_random: string, session_id: string, ciphers: index_vec, comp_methods: index_vec) &priority=5
+event ssl_client_hello(c: connection, version: count, record_version: count, client_random: string, session_id: string, ciphers: index_vec, comp_methods: index_vec) &priority=5
 	{
 	set_session(c);
 
@@ -212,7 +212,7 @@ event ssl_client_hello(c: connection, version: count, record_version: count, pos
 		}
 	}
 
-event ssl_server_hello(c: connection, version: count, record_version: count, possible_ts: time, server_random: string, session_id: string, cipher: count, comp_method: count) &priority=5
+event ssl_server_hello(c: connection, version: count, record_version: count, server_random: string, session_id: string, cipher: count, comp_method: count) &priority=5
 	{
 	set_session(c);
 
