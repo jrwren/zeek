@@ -409,23 +409,3 @@ event protocol_violation(c: connection, atype: Analyzer::Tag, aid: count,
 	if ( c?$ssl && ( atype == Analyzer::ANALYZER_SSL || atype == Analyzer::ANALYZER_DTLS ) )
 		finish(c, T);
 	}
-
-event ssl_encrypted_data(c: connection, is_orig: bool, record_version: count, content_type: count, length: count, data: string) &priority=5
-	{
-	set_session(c);
-	print "ssl_encrypted_data is_orig: ", is_orig;
-	print "ssl_encrypted_data record_version: ", record_version;
-	print "ssl_encrypted_data content_type: ", content_type;
-	print "ssl_encrypted_data length: ", length;
-	print "ssl_encrypted_data data: ", data;
-
-	if ( c$ssl$version_num/0xFF != 0x7F && c$ssl$version_num != TLSv13 )
-		{
-		local wi = Weird::Info($ts=network_time(), $name="ssl_early_application_data", $uid=c$uid, $id=c$id);
-		Weird::weird(wi);
-		print "ssl_encrypted_data ssl_early_application_data ";
-		return;
-		}
-
-	print data;
-	}

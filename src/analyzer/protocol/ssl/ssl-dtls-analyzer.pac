@@ -54,9 +54,9 @@ refine connection SSL_Conn += {
 							bro_analyzer()->Conn());
 			}
 
-		if ( ssl_encrypted_data )
+		if ( ssl_ciphertext_data )
 			{
-			BifEvent::generate_ssl_encrypted_data(bro_analyzer(),
+			BifEvent::generate_ssl_ciphertext_data(bro_analyzer(),
 				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new StringVal(ct));
 			}
 		return true;
@@ -64,13 +64,12 @@ refine connection SSL_Conn += {
 
 	function proc_applicationdata_record(rec : SSLRecord, ad : ApplicationData) : bool
 		%{
-			BifEvent::generate_application_data(bro_analyzer(),
-			bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new StringVal(ad->data()));
+		BifEvent::generate_ssl_application_data(bro_analyzer(),
+		bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length}, new 	StringVal(ad->data()));
 		%}
 
 	function proc_plaintext_record(rec : SSLRecord) : bool
 		%{
-		
 		if ( ssl_plaintext_data )
 			BifEvent::generate_ssl_plaintext_data(bro_analyzer(),
 				bro_analyzer()->Conn(), ${rec.is_orig}, ${rec.raw_tls_version}, ${rec.content_type}, ${rec.length});

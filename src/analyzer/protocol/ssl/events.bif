@@ -526,9 +526,36 @@ event ssl_plaintext_data%(c: connection, is_orig: bool, record_version: count, c
 ##
 ## length: length of the entire message.
 ##
+## data: the encrypted TLS Record.
+##
 ## .. bro:see::  ssl_client_hello ssl_established ssl_extension ssl_server_hello
 ##    ssl_alert ssl_heartbeat
-event ssl_encrypted_data%(c: connection, is_orig: bool, record_version: count, content_type: count, length: count, data: string%);
+event ssl_ciphertext_data%(c: connection, is_orig: bool, record_version: count, content_type: count, length: count, data: string%);
+
+## Generated for SSL/TLS messages that are sent after session encryption
+## started and are of the TLS type application data.
+##
+## Note that :bro:id:`SSL::disable_analyzer_after_detection` has to be changed
+## from its default to false for this event to be generated.
+##
+## c: The connection.
+##
+## is_orig: True if event is raised for originator side of the connection.
+##
+## record_version: TLS version given in the record layer of the message.
+##                 Set to 0 for SSLv2.
+##
+## content_type: message type as reported by TLS session layer. Not populated for
+##               SSLv2.
+##
+## length: length of the entire message.
+##
+## data: the encrypted application data.
+##
+## .. bro:see::  ssl_client_hello ssl_established ssl_extension ssl_server_hello
+##    ssl_alert ssl_heartbeat
+event ssl_application_data%(c: connection, is_orig: bool, record_version: count, content_type: count, length: count, data: string%);
+
 
 ## This event contains the OCSP response contained in a Certificate Status Request
 ## message, when the client requested OCSP stapling and the server supports it.
