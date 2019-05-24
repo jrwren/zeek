@@ -67,6 +67,10 @@ export {
 		## Flag to indicate if this record already has been logged, to
 		## prevent duplicates.
 		logged:           bool             &default=F;
+		## client random
+		client_random:    string &optional;
+		## server random
+		server_random:    string &optional;
 	};
 
 	## The default root CA bundle.  By default, the mozilla-ca-list.bro
@@ -210,6 +214,8 @@ event ssl_client_hello(c: connection, version: count, record_version: count, cli
 		c$ssl$session_id = bytestring_to_hexstr(session_id);
 		c$ssl$client_ticket_empty_session_seen = F;
 		}
+	if ( |client_random| > 0 )
+		c$ssl$client_random = bytestring_to_hexstr(client_random);
 	}
 
 event ssl_server_hello(c: connection, version: count, record_version: count, server_random: string, session_id: string, cipher: count, comp_method: count) &priority=5
@@ -226,6 +232,8 @@ event ssl_server_hello(c: connection, version: count, record_version: count, ser
 
 	if ( c$ssl?$session_id && c$ssl$session_id == bytestring_to_hexstr(session_id) )
 		c$ssl$resumed = T;
+	if ( |server_random| > 0 )
+		c$ssl$server_random = bytestring_to_hexstr(server_random);
 	}
 
 event ssl_extension_supported_versions(c: connection, is_orig: bool, versions: index_vec)

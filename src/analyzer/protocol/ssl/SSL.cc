@@ -172,6 +172,9 @@ pid_t popen2(const char *const argv[], int *in, int *out, int *err)
         perror("allocating pipe for child stderr");
         return -1;
     }
+	// If fork fails, presumably there are much bigger problems, but since bro
+	// is already running there is no reason to exit if fork fails, instead
+	// continue and do what can be done and do not try to TLS decrypt.
     pid = fork();
     if (0==pid) {
         if (-1==dup2(inpipefd[0], STDIN_FILENO)) {exit(errno);}
@@ -187,6 +190,7 @@ pid_t popen2(const char *const argv[], int *in, int *out, int *err)
         perror("exec failed");
         exit(1);
     }
+
     close(inpipefd[0]);
     close(outpipefd[1]);
     close(errpipefd[1]);
@@ -209,11 +213,11 @@ std::ostream& operator<< (std::ostream& ostr, const hexwrite<T> &fwv)
     return ostr << std::setw(2)<< std::setfill('0')<< std::hex << fwv.v;
 	}
 
-size_t writeall(int fd, const char* buf, const size_t len)
+ssize_t writeall(int fd, const char* buf, const size_t len)
 	{
 	size_t total = 0;
 	int bytesleft = len;
-	int n;
+	ssize_t n;
 	while(total<len)
 		{
 		n = write(fd, buf+total, bytesleft);
@@ -307,20 +311,16 @@ int DecryptProcess::Close() {
 }
 
 DecryptProcess::~DecryptProcess() {
-	int r;
 	if(!inclosed)
 		{
-		r = close(in_fd);
-		if (r!=0) {
+		if (!close(in_fd)) {
 			DBG_LOG(DBG_ANALYZER, "could not close stdin of tp process: %s", strerror(errno));
 			}
 		}
-	r = close(out_fd);
-	if (r!=0) {
+	if (!close(out_fd)) {
 		DBG_LOG(DBG_ANALYZER, "could not close stdout of tp process: %s", strerror(errno));
 		}
-	r = close(err_fd);
-	if (r!=0) {
+	if (!close(err_fd)) {
 		DBG_LOG(DBG_ANALYZER, "could not close stderr of tp process: %s", strerror(errno));
 		}
 }
@@ -339,7 +339,7 @@ unique_ptr<std::string> DecryptProcess::Read() {
     std::vector<char> buf(BUFLEN);
 	fd_set rfds;
 	struct timeval tv;
-	int n;
+	ssize_t n;
 	int fcnt;
 	tv.tv_sec = 0;
 	tv.tv_usec = 10000;
@@ -382,3 +382,4 @@ unique_ptr<std::string> DecryptProcess::Read() {
 		} while ( n > 0 );
 	return result;
 	}
+	

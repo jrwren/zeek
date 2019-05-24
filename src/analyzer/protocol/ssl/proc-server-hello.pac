@@ -13,7 +13,7 @@
 			}
 
 // This function is included in both Handshake_Conn AND SSL_Conn very confusing.
-// The SSL_conn version is called only when SSLv2 is used.
+// The SSL_Conn version is called only when SSLv2 is used.
 		// I do not know why, but I can't use std::move here.
 		//serverrandom_ = std::move(server_random);
 		serverrandom_.init(server_random.data(), server_random.length());
@@ -39,4 +39,3 @@
 
 		return true;
 		%}
-
