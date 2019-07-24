@@ -1,5 +1,5 @@
 	function proc_server_hello(
-					version : uint16, ts : double,
+					version : uint16,
 					server_random : bytestring,
 					session_id : uint8[],
 					cipher_suites16 : uint16[],
@@ -12,6 +12,12 @@
 			bro_analyzer()->SetSkip(true);
 			}
 
+// This function is included in both Handshake_Conn AND SSL_Conn very confusing.
+// The SSL_Conn version is called only when SSLv2 is used.
+		// I do not know why, but I can't use std::move here.
+		//serverrandom_ = std::move(server_random);
+		serverrandom_.init(server_random.data(), server_random.length());
+
 		if ( ssl_server_hello )
 			{
 			vector<int>* ciphers = new vector<int>();
@@ -23,7 +29,7 @@
 
 			BifEvent::generate_ssl_server_hello(bro_analyzer(),
 							bro_analyzer()->Conn(),
-							version, record_version(), ts, new StringVal(server_random.length(),
+							version, record_version(), new StringVal(server_random.length(),
 							(const char*) server_random.data()),
 							to_string_val(session_id),
 							ciphers->size()==0 ? 0 : ciphers->at(0), comp_method);

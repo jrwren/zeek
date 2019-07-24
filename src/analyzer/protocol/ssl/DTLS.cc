@@ -69,3 +69,19 @@ void DTLS_Analyzer::SendHandshake(uint16 raw_tls_version, uint8 msg_type, uint32
 		ProtocolViolation(fmt("Binpac exception: %s", e.c_msg()));
 		}
 	}
+
+void DTLS_Analyzer::DoHTTP(std::string data, bool is_orig)
+	{
+	DBG_LOG(DBG_ANALYZER, "DTLS_Analyzer::DoHTTP not implemented.");
+	}
+
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+unique_ptr<std::string> DTLS_Analyzer::DecryptString(int cs, std::string cr, std::string sr, bool is_orig, std::string cont)
+	{
+	DBG_LOG(DBG_ANALYZER, "DTLS DecryptString not implemented.");
+	return make_unique<std::string>("");
+	}

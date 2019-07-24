@@ -70,8 +70,7 @@ type HelloRequest(rec: HandshakeRecord) = empty;
 
 type ClientHello(rec: HandshakeRecord) = record {
 	client_version : uint16;
-	gmt_unix_time : uint32;
-	random_bytes : bytestring &length = 28;
+	random_bytes : bytestring &length = 32;
 	session_len : uint8;
 	session_id : uint8[session_len];
 	dtls_cookie: case client_version of {
@@ -116,8 +115,7 @@ type ServerHelloChoice(rec: HandshakeRecord) = record {
 };
 
 type ServerHello(rec: HandshakeRecord, server_version: uint16) = record {
-	gmt_unix_time : uint32;
-	random_bytes : bytestring &length = 28;
+	random_bytes : bytestring &length = 32;
 	session_len : uint8;
 	session_id : uint8[session_len];
 	cipher_suite : uint16[1];
@@ -890,6 +888,8 @@ refine connection Handshake_Conn += {
 		uint32 chosen_cipher_;
 		uint16 chosen_version_;
 		uint16 record_version_;
+		bytestring clientrandom_;
+		bytestring serverrandom_;
 	%}
 
 	%init{
@@ -898,6 +898,8 @@ refine connection Handshake_Conn += {
 		record_version_ = 0;
 	%}
 
+	function clientrandom() : bytestring %{ return clientrandom_; %}
+	function serverrandom() : bytestring %{ return serverrandom_; %}
 	function chosen_cipher() : int %{ return chosen_cipher_; %}
 
 	function set_cipher(cipher: uint32) : bool

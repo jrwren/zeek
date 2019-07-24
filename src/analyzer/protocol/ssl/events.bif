@@ -15,9 +15,6 @@
 ## record_version: TLS version given in the record layer of the message.
 ##                 Set to 0 for SSLv2.
 ##
-## possible_ts: The current time as sent by the client. Note that SSL/TLS does
-##              not require clocks to be set correctly, so treat with care.
-##
 ## session_id: The session ID sent by the client (if any).
 ##
 ## client_random: The random value sent by the client. For version 2 connections,
@@ -35,7 +32,7 @@
 ##    ssl_change_cipher_spec
 ##    ssl_dh_client_params ssl_ecdh_server_params ssl_ecdh_client_params
 ##    ssl_rsa_client_pms
-event ssl_client_hello%(c: connection, version: count, record_version: count, possible_ts: time, client_random: string, session_id: string, ciphers: index_vec, comp_methods: index_vec%);
+event ssl_client_hello%(c: connection, version: count, record_version: count, client_random: string, session_id: string, ciphers: index_vec, comp_methods: index_vec%);
 
 ## Generated for an SSL/TLS server's initial *hello* message. SSL/TLS sessions
 ## start with an unencrypted handshake, and Bro extracts as much information out
@@ -53,10 +50,6 @@ event ssl_client_hello%(c: connection, version: count, record_version: count, po
 ##
 ## record_version: TLS version given in the record layer of the message.
 ##                 Set to 0 for SSLv2.
-##
-## possible_ts: The current time as sent by the server. Note that SSL/TLS does
-##              not require clocks to be set correctly, so treat with care. This value
-##              is not sent in TLSv1.3.
 ##
 ## session_id: The session ID as sent back by the server (if any). This value is not
 ##             sent in TLSv1.3.
@@ -77,7 +70,7 @@ event ssl_client_hello%(c: connection, version: count, record_version: count, po
 ##    ssl_dh_server_params ssl_handshake_message ssl_change_cipher_spec
 ##    ssl_dh_client_params ssl_ecdh_server_params ssl_ecdh_client_params
 ##    ssl_rsa_client_pms
-event ssl_server_hello%(c: connection, version: count, record_version: count, possible_ts: time, server_random: string, session_id: string, cipher: count, comp_method: count%);
+event ssl_server_hello%(c: connection, version: count, record_version: count, server_random: string, session_id: string, cipher: count, comp_method: count%);
 
 ## Generated for SSL/TLS extensions seen in an initial handshake.  SSL/TLS
 ## sessions start with an unencrypted handshake, and Bro extracts as much
@@ -529,6 +522,30 @@ event ssl_plaintext_data%(c: connection, is_orig: bool, record_version: count, c
 ## .. bro:see::  ssl_client_hello ssl_established ssl_extension ssl_server_hello
 ##    ssl_alert ssl_heartbeat
 event ssl_encrypted_data%(c: connection, is_orig: bool, record_version: count, content_type: count, length: count%);
+
+## Generated for SSL/TLS messages that are sent after session encryption
+## started.
+##
+## Note that :bro:id:`SSL::disable_analyzer_after_detection` has to be changed
+## from its default to false for this event to be generated.
+##
+## c: The connection.
+##
+## is_orig: True if event is raised for originator side of the connection.
+##
+## record_version: TLS version given in the record layer of the message.
+##                 Set to 0 for SSLv2.
+##
+## content_type: message type as reported by TLS session layer. Not populated for
+##               SSLv2.
+##
+## length: length of the entire message.
+##
+## data: the encrypted TLS Record.
+##
+## .. bro:see::  ssl_client_hello ssl_established ssl_extension ssl_server_hello
+##    ssl_alert ssl_heartbeat
+event ssl_ciphertext_data%(c: connection, is_orig: bool, record_version: count, content_type: count, length: count, data: string%);
 
 ## This event contains the OCSP response contained in a Certificate Status Request
 ## message, when the client requested OCSP stapling and the server supports it.
