@@ -119,7 +119,9 @@ redef likely_server_ports += { 67/udp };
 
 event bro_init() &priority=5
 	{
-	Log::create_stream(DHCP::LOG, [$columns=Info, $ev=log_dhcp, $path="dhcp"]);
+# Do not create this log here. Create a log with columns of a different type
+# in sandcastle.bro which does not aggregate.
+#	Log::create_stream(DHCP::LOG, [$columns=Info, $ev=log_dhcp, $path="dhcp"]);
 	Analyzer::register_for_ports(Analyzer::ANALYZER_DHCP, ports);
 	}
 
@@ -261,12 +263,14 @@ event DHCP::aggregate_msgs(ts: time, id: conn_id, uid: string, is_orig: bool, ms
 # Aggregate DHCP messages to the manager.
 event dhcp_message(c: connection, is_orig: bool, msg: DHCP::Msg, options: DHCP::Options) &priority=-5
 	{
-	event DHCP::aggregate_msgs(network_time(), c$id, c$uid, is_orig, msg, options);
+# Disable aggregate_msgs to use only event in sandcastle.bro.
+#	event DHCP::aggregate_msgs(network_time(), c$id, c$uid, is_orig, msg, options);
 	}
 
 event bro_done() &priority=-5
 	{
 	# Log any remaining data that hasn't already been logged!
-	for ( i in DHCP::join_data )
-		join_data_expiration(DHCP::join_data, i);
+# aggregate_msgs are disabled: do not join.
+#	for ( i in DHCP::join_data )
+#		join_data_expiration(DHCP::join_data, i);
 	}
