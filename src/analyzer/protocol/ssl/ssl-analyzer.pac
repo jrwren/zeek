@@ -32,8 +32,22 @@ refine connection SSL_Conn += {
 	function wat_ciphertext_record(rec : SSLRecord, cont: bytestring) : bool
 		%{
 		DBG_LOG(DBG_ANALYZER, "wat_ciphertext_record w/ content type:%x", ${rec.content_type});
+
+		// Don't try to do anything if tls.keylog file does not exist.
+		// Only check for tls.keylog existance once.
+		if (tlskeylog_ == 0)
+			{
+			if ( access("tls.keylog", R_OK) == 0 )
+				{
+				tlskeylog_ = 1;
+				}
+			else
+				{
+				tlskeylog_ = 2;
+				}
+			}
 		// If TLS App Data, then decrypt & send to HTTP
-		if ( ${rec.content_type} == 0x17 )
+		if ( (tlskeylog_ == 1) && (${rec.content_type} == 0x17) )
 			{
 			std::stringstream input;
 			// uint8 is a char alias so these insertions are as raw char, not as formatted ints.

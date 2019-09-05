@@ -17,10 +17,12 @@ refine connection SSL_Conn += {
 		bytestring clientrandom_;
 		bytestring serverrandom_;
 		uint32 chosen_cipher_;
+		int tlskeylog_;
 	%}
 
 	%init{
 		established_ = false;
+		tlskeylog_ = 0;
 	%}
 
 	%cleanup{
