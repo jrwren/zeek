@@ -16,6 +16,12 @@ type PlaintextRecord(rec: SSLRecord) = case rec.content_type of {
 # Encryption Tracking
 ######################################################################
 
+enum TLSKeyLogState {
+	TLSKEYLOG_STATE_INIT,
+	TLSKEYLOG_STATE_PRESENT,
+	TLSKEYLOG_STATE_ABSCENT
+}
+
 enum AnalyzerState {
 	STATE_CLEAR,
 	STATE_ENCRYPTED

@@ -22,7 +22,7 @@ refine connection SSL_Conn += {
 
 	%init{
 		established_ = false;
-		tlskeylog_ = 0;
+		tlskeylog_ = TLSKEYLOG_STATE_INIT;
 	%}
 
 	%cleanup{

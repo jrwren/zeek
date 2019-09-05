@@ -35,19 +35,19 @@ refine connection SSL_Conn += {
 
 		// Don't try to do anything if tls.keylog file does not exist.
 		// Only check for tls.keylog existance once.
-		if (tlskeylog_ == 0)
+		if (tlskeylog_ == TLSKEYLOG_STATE_INIT)
 			{
 			if ( access("tls.keylog", R_OK) == 0 )
 				{
-				tlskeylog_ = 1;
+				tlskeylog_ = TLSKEYLOG_STATE_PRESENT;
 				}
 			else
 				{
-				tlskeylog_ = 2;
+				tlskeylog_ = TLSKEYLOG_STATE_ABSCENT;
 				}
 			}
 		// If TLS App Data, then decrypt & send to HTTP
-		if ( (tlskeylog_ == 1) && (${rec.content_type} == 0x17) )
+		if ( (tlskeylog_ == TLSKEYLOG_STATE_PRESENT) && (${rec.content_type} == 0x17) )
 			{
 			std::stringstream input;
 			// uint8 is a char alias so these insertions are as raw char, not as formatted ints.
