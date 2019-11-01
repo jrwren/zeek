@@ -1,4 +1,6 @@
-
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <signal.h>
 #include "SSL.h"
 #include "analyzer/protocol/tcp/TCP_Reassembler.h"
 #include "Reporter.h"
@@ -266,7 +268,6 @@ DecryptProcess::DecryptProcess(int tlsver, int cs, binpac::bytestring cr, binpac
 	const char* tlsverhex_cstr = tvs.c_str();
 	int in = 0, out = 0, err = 0;
     int res = 0;
-    pid_t pid = 0;
 	int n = 0;
 	const char *argv[13] = {
         "tp",
@@ -299,9 +300,19 @@ int DecryptProcess::Close() {
 		{
 		int r = close(in_fd);
 		if (r!=0) {
-			DBG_LOG(DBG_ANALYZER, "could not close stdin of tp process: %s", strerror(errno));
+			char ebuf[256];
+			bro_strerror_r(errno, ebuf, sizeof(ebuf));
+			DBG_LOG(DBG_ANALYZER, "could not close stdin of tp process %d: %s",
+				pid, ebuf);
 			}
 		inclosed = true;
+		}
+	// Try to reap zombies, but don't block.
+	if(0 > waitpid(pid, NULL, WNOHANG))
+		{
+		char ebuf[256];
+		bro_strerror_r(errno, ebuf, sizeof(ebuf));
+		DBG_LOG(DBG_ANALYZER, "waitpid error pid %d: %s", pid, ebuf);
 		}
 	return 0;
 }
@@ -312,17 +323,25 @@ DecryptProcess::~DecryptProcess() {
 		{
 		r = close(in_fd);
 		if (r!=0) {
-			DBG_LOG(DBG_ANALYZER, "could not close stdin of tp process: %s", strerror(errno));
+			char ebuf[256];
+			bro_strerror_r(errno, ebuf, sizeof(ebuf));
+			DBG_LOG(DBG_ANALYZER, "could not close stdin of tp process: %s", ebuf);
 			}
 		}
 	r = close(out_fd);
 	if (r!=0) {
-		DBG_LOG(DBG_ANALYZER, "could not close stdout of tp process: %s", strerror(errno));
+		char ebuf[256];
+		bro_strerror_r(errno, ebuf, sizeof(ebuf));
+		DBG_LOG(DBG_ANALYZER, "could not close stdout of tp process: %s", ebuf);
 		}
 	r = close(err_fd);
 	if (r!=0) {
-		DBG_LOG(DBG_ANALYZER, "could not close stderr of tp process: %s", strerror(errno));
+		char ebuf[256];
+		bro_strerror_r(errno, ebuf, sizeof(ebuf));
+		DBG_LOG(DBG_ANALYZER, "could not close stderr of tp process: %s", ebuf);
 		}
+	// Kill the child process. It can do nothing for us anymore.
+	kill(pid, SIGKILL);
 }
 
 int DecryptProcess::Write(std::string cont) {
@@ -335,8 +354,7 @@ int DecryptProcess::Write(std::string cont) {
 
 unique_ptr<std::string> DecryptProcess::Read() {
 	auto result = make_unique<std::string>();
-	const unsigned int BUFLEN = 1024*16; // TLS record max size, not that it matters.
-    std::vector<char> buf(BUFLEN);
+	char buf[1024*16]; // TLS record max size, not that it matters.
 	fd_set rfds;
 	struct timeval tv;
 	int n;
@@ -360,20 +378,26 @@ unique_ptr<std::string> DecryptProcess::Read() {
 			}
 		if (FD_ISSET(err_fd, &rfds)) {
 			DBG_LOG(DBG_ANALYZER, "FD_ISSET err_fd");
-			n = read(err_fd, &buf[0], buf.size());
+			n = read(err_fd, buf, sizeof(buf));
 			if (n>0) {
-				DBG_LOG(DBG_ANALYZER, "stderr from tp: %s", &buf[0]);
+				if (n == sizeof(buf)) {
+					n--;
+					}
+				buf[n] = '\0';
+				DBG_LOG(DBG_ANALYZER, "stderr from tp: %s", buf);
 				}
 			}
 		if (FD_ISSET(out_fd, &rfds)) {
 			DBG_LOG(DBG_ANALYZER, "reading from tp stdout");
-			n = read(out_fd, &buf[0], buf.size());
+			n = read(out_fd, buf, sizeof(buf));
 			if (n == -1) {
-				DBG_LOG(DBG_ANALYZER, "error reading from stdout of child process: %s tp %s", strerror(errno), &buf[0]);
+				char ebuf[256];
+				bro_strerror_r(errno, ebuf, sizeof(ebuf));
+				DBG_LOG(DBG_ANALYZER, "error reading from stdout of child tp process: %s", ebuf);
 				return result;
 				}
 			if (n>0)
-				result->append(buf.cbegin(), buf.cbegin()+n);
+				result->append(buf, n);
 			}
 		FD_ZERO(&rfds);
 		FD_SET(out_fd, &rfds);
