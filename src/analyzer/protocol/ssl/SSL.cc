@@ -1,4 +1,4 @@
-
+#include <sys/wait.h>
 #include "SSL.h"
 #include "analyzer/protocol/tcp/TCP_Reassembler.h"
 #include "Reporter.h"
@@ -266,7 +266,6 @@ DecryptProcess::DecryptProcess(int tlsver, int cs, binpac::bytestring cr, binpac
 	const char* tlsverhex_cstr = tvs.c_str();
 	int in = 0, out = 0, err = 0;
     int res = 0;
-    pid_t pid = 0;
 	int n = 0;
 	const char *argv[13] = {
         "tp",
@@ -303,6 +302,11 @@ int DecryptProcess::Close() {
 			}
 		inclosed = true;
 		}
+	// Try to reap zombies, but don't block.
+	if(0 > waitpid(pid, NULL, WNOHANG))
+		{
+		DBG_LOG(DBG_ANALYZER, "waitpid error");
+		}
 	return 0;
 }
 
@@ -323,6 +327,10 @@ DecryptProcess::~DecryptProcess() {
 	if (r!=0) {
 		DBG_LOG(DBG_ANALYZER, "could not close stderr of tp process: %s", strerror(errno));
 		}
+	// Try to reap zombies, but don't block.
+	// Intentionally ignoring the return value because ideally it is already
+	// waited in Close() and this is just covering the failed case from that.
+	waitpid(pid, NULL, WNOHANG);
 }
 
 int DecryptProcess::Write(std::string cont) {
@@ -336,7 +344,8 @@ int DecryptProcess::Write(std::string cont) {
 unique_ptr<std::string> DecryptProcess::Read() {
 	auto result = make_unique<std::string>();
 	const unsigned int BUFLEN = 1024*16; // TLS record max size, not that it matters.
-    std::vector<char> buf(BUFLEN);
+	char meh[BUFLEN];
+	char *buf = meh;
 	fd_set rfds;
 	struct timeval tv;
 	int n;
@@ -360,20 +369,20 @@ unique_ptr<std::string> DecryptProcess::Read() {
 			}
 		if (FD_ISSET(err_fd, &rfds)) {
 			DBG_LOG(DBG_ANALYZER, "FD_ISSET err_fd");
-			n = read(err_fd, &buf[0], buf.size());
+			n = read(err_fd, buf, BUFLEN);
 			if (n>0) {
-				DBG_LOG(DBG_ANALYZER, "stderr from tp: %s", &buf[0]);
+				DBG_LOG(DBG_ANALYZER, "stderr from tp: %s", buf);
 				}
 			}
 		if (FD_ISSET(out_fd, &rfds)) {
 			DBG_LOG(DBG_ANALYZER, "reading from tp stdout");
-			n = read(out_fd, &buf[0], buf.size());
+			n = read(out_fd, buf, BUFLEN);
 			if (n == -1) {
-				DBG_LOG(DBG_ANALYZER, "error reading from stdout of child process: %s tp %s", strerror(errno), &buf[0]);
+				DBG_LOG(DBG_ANALYZER, "error reading from stdout of child process: %s tp %s", strerror(errno), buf);
 				return result;
 				}
 			if (n>0)
-				result->append(buf.cbegin(), buf.cbegin()+n);
+				result->append(buf, BUFLEN);
 			}
 		FD_ZERO(&rfds);
 		FD_SET(out_fd, &rfds);

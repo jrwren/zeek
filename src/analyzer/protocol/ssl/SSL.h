@@ -29,6 +29,7 @@ protected:
 	int in_fd;
 	int out_fd;
 	int err_fd;
+	pid_t pid;
 };
 
 class SSL_Analyzer : public tcp::TCP_ApplicationAnalyzer {
