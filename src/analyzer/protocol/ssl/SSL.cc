@@ -312,13 +312,19 @@ int DecryptProcess::Close() {
 		inclosed = true;
 		}
 	// Try to reap zombies, but don't block.
-	if(0 > waitpid(pid, &exit_status, WNOHANG))
+	int es = 0;
+	if(0 > waitpid(pid, &es, WNOHANG))
 		{
 		char ebuf[256];
 		bro_strerror_r(errno, ebuf, sizeof(ebuf));
 		DBG_LOG(DBG_ANALYZER, "waitpid error pid %d: %s", pid, ebuf);
 		}
-		exit_status = WEXITSTATUS(exit_status);
+	else {
+		// don't bother with exit_status if the process didn't exit cleanly.
+		if (WIFEXITED(es)) {
+			exit_status = WEXITSTATUS(es);
+		}
+	}
 	return 0;
 }
 
