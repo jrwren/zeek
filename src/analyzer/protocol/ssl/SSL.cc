@@ -53,6 +53,10 @@ void SSL_Analyzer::EndpointEOF(bool is_orig)
 		d = decrypt_not_orig.get();
 	if (d!=nullptr) {
 		d->Close();
+		if (d->exit_status != 0) {
+			BifEvent::generate_ssl_tp_fail(this,
+				Conn(), d->exit_status);
+		}
 		auto data = d->Read();
 		if (data.get()!=nullptr && *data!="") {
 			DBG_LOG(DBG_ANALYZER, "read %lu bytes from tp after closing stdin", data->length());
@@ -308,12 +312,19 @@ int DecryptProcess::Close() {
 		inclosed = true;
 		}
 	// Try to reap zombies, but don't block.
-	if(0 > waitpid(pid, NULL, WNOHANG))
+	int es = 0;
+	if(0 > waitpid(pid, &es, WNOHANG))
 		{
 		char ebuf[256];
 		bro_strerror_r(errno, ebuf, sizeof(ebuf));
 		DBG_LOG(DBG_ANALYZER, "waitpid error pid %d: %s", pid, ebuf);
 		}
+	else {
+		// don't bother with exit_status if the process didn't exit cleanly.
+		if (WIFEXITED(es)) {
+			exit_status = WEXITSTATUS(es);
+		}
+	}
 	return 0;
 }
 

@@ -584,3 +584,7 @@ event ssl_handshake_message%(c: connection, is_orig: bool, msg_type: count, leng
 ##    ssl_session_ticket_handshake x509_certificate ssl_client_hello
 ##    ssl_handshake_message
 event ssl_change_cipher_spec%(c: connection, is_orig: bool%);
+
+## This event is raised when TLS decryption fails because tp returned a non-zero
+## exit code.
+event ssl_tp_fail%(c: connection, code: int%);

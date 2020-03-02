@@ -24,6 +24,7 @@ public:
 	int Write(std::string cont);
 	unique_ptr<std::string> Read();
 	int Close();
+	int exit_status = 0;
 protected:
 	bool inclosed;
 	int in_fd;
