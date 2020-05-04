@@ -22,14 +22,15 @@ public:
 	DecryptProcess(int tlsver, int cs, binpac::bytestring cr, binpac::bytestring sr, bool is_orig);
 	~DecryptProcess();
 	int Write(std::string cont);
-	unique_ptr<std::string> Read();
+	unique_ptr<std::string> Read(int read_timeout = 0);
 	int Close();
+	void WaitPid();
 	int exit_status = 0;
+	bool read_timedout = false;
 protected:
 	bool inclosed;
 	int in_fd;
 	int out_fd;
-	int err_fd;
 	pid_t pid;
 };
 
@@ -56,6 +57,8 @@ public:
 
 	void DoHTTP(std::string data, bool is_orig);
 	unique_ptr<std::string> DecryptString(int tlsver, int cs, binpac::bytestring cr, binpac::bytestring sr, bool is_orig, std::string cont);
+
+	static int init_tp_timeout();
 
 protected:
 	binpac::SSL::SSL_Conn* interp;
