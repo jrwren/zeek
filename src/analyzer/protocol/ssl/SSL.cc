@@ -61,7 +61,7 @@ void SSL_Analyzer::Done()
 			DBG_LOG(DBG_ANALYZER, "read 0 bytes from tp after closing stdin");
 			}
 		// TODO: Would it be cleaner to kill the child process if the read
-		// times out, so that waidpid can get the exit status?
+		// times out, so that waitpid can get the exit status?
 		d->WaitPid();
 		if (d->exit_status != 0) {
 			BifEvent::generate_ssl_tp_fail(this,
@@ -370,7 +370,7 @@ int DecryptProcess::Write(std::string cont) {
 	return res;
 	}
 
-unique_ptr<std::string> DecryptProcess::Read(int read_timeout) {
+unique_ptr<std::string> DecryptProcess::Read(long read_timeout) {
 	auto result = make_unique<std::string>();
 	char buf[1024*16]; // TLS record max size, not that it matters.
 	fd_set rfds;
@@ -390,11 +390,13 @@ unique_ptr<std::string> DecryptProcess::Read(int read_timeout) {
 		{
 		n = 0;
 		if (fcnt == -1) {
-			DBG_LOG(DBG_ANALYZER, "error calling select for tp stdout, stderr");
+			DBG_LOG(DBG_ANALYZER, "error calling select for tp stdout");
 			return result;
 			}
 		else if (fcnt == 0) {
-			DBG_LOG(DBG_ANALYZER, "select timed out waiting on stdout, stderr");
+			DBG_LOG(DBG_ANALYZER, "select timed out waiting on stdout");
+			// IFF the first select (outside the loop) timesout it is considered
+			// a timeout.
 			if (read_timeout!=0 && tv.tv_sec!=0)
 				{
 				DBG_LOG(DBG_ANALYZER, "pb %d select on final read timed out\n", pid);
@@ -417,6 +419,7 @@ unique_ptr<std::string> DecryptProcess::Read(int read_timeout) {
 		FD_ZERO(&rfds);
 		FD_SET(out_fd, &rfds);
 		// select can change the timeout value so reset it every time.
+		// Don't do the courtesy wait of 2ms(see above) on remaining selects.
 		tv.tv_sec = 0;
 		tv.tv_usec = 0;
 		fcnt = select(out_fd + 1, &rfds, NULL, NULL, &tv);
@@ -426,16 +429,16 @@ unique_ptr<std::string> DecryptProcess::Read(int read_timeout) {
 
 bool parsed_tp_timeout = false;
 
-int SSL_Analyzer::init_tp_timeout()
-	{
-	if (parsed_tp_timeout)
-		return tp_timeout;
-	parsed_tp_timeout = true;
+// C++ guarantees this static initializer will only run once.
+const long SSL_Analyzer::tp_timeout = [] {
 	char *tps = getenv("BRO_TP_TIMEOUT");
 	if (tps == NULL)
 		{
-		return tp_timeout;
+		return (long)10; // 10 is the default value.
 		}
-	tp_timeout = atoi(tps);
-	return tp_timeout;
-	}
+	// strtol() would allow for detecting errors on the envvar value, but what
+	// would we do? should bro exit? This seemed the simplest.
+	long val = atol(tps);
+	if (val < 0) return (long)10; // 10 is the default value.
+	return val;
+	}();

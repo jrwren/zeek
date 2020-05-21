@@ -22,7 +22,7 @@ public:
 	DecryptProcess(int tlsver, int cs, binpac::bytestring cr, binpac::bytestring sr, bool is_orig);
 	~DecryptProcess();
 	int Write(std::string cont);
-	unique_ptr<std::string> Read(int read_timeout = 0);
+	unique_ptr<std::string> Read(long read_timeout = 0);
 	int Close();
 	void WaitPid();
 	int exit_status = 0;
@@ -67,6 +67,7 @@ protected:
 	bool http_active;
 	std::unique_ptr<DecryptProcess> decrypt_orig;
 	std::unique_ptr<DecryptProcess> decrypt_not_orig;
+	static const long tp_timeout;
 };
 
 struct PopenFailException : std::exception {

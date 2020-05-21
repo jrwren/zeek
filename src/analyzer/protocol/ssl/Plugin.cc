@@ -13,7 +13,6 @@ class Plugin : public plugin::Plugin {
 public:
 	plugin::Configuration Configure()
 		{
-		::analyzer::ssl::SSL_Analyzer::init_tp_timeout();
 		AddComponent(new ::analyzer::Component("SSL", ::analyzer::ssl::SSL_Analyzer::Instantiate));
 		AddComponent(new ::analyzer::Component("DTLS", ::analyzer::dtls::DTLS_Analyzer::Instantiate));
 
